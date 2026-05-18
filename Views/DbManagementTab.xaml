@@ -1,0 +1,293 @@
+<UserControl x:Class="UsualIntakeAnalyzer.Views.DbManagementTab"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid Background="{StaticResource BgBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0" Style="{StaticResource ToolbarBorder}">
+            <Border BorderBrush="{StaticResource BorderLightBrush}" BorderThickness="1"
+                    CornerRadius="4" HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal">
+                    <Button x:Name="BtnViewData"
+                            Content="자료 (1일·2일·코드집)"
+                            Padding="14,7" FontSize="12"
+                            BorderThickness="0" Click="BtnViewData_Click"/>
+                    <Button x:Name="BtnViewGroup"
+                            Content="식품군 DB"
+                            Padding="14,7" FontSize="12"
+                            BorderThickness="0"
+                            Style="{StaticResource SecondaryButton}"
+                            Click="BtnViewGroup_Click"/>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <Grid Grid.Row="1">
+        <Grid x:Name="PnlDataView">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="290" MinWidth="240"/>
+            <ColumnDefinition Width="1"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Grid Grid.Column="0" Margin="20,20,16,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Margin="0,0,0,12">
+                <TextBlock Text="필터"
+                           FontSize="14" FontWeight="SemiBold"
+                           Foreground="{StaticResource TextBrush}"/>
+                <TextBlock Text="자료원 + 종류로 등록 데이터 좁힘"
+                           FontSize="11" Foreground="{StaticResource TextDimBrush}"
+                           Margin="0,2,0,0"/>
+            </StackPanel>
+
+            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled">
+                <StackPanel>
+                    <TextBlock Text="대분류 (사업)"
+                               FontSize="11" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextSecBrush}"
+                               Margin="0,0,0,4"/>
+                    <ComboBox x:Name="CboProject"
+                              SelectionChanged="CboProject_SelectionChanged"/>
+
+                    <TextBlock Text="기수"
+                               FontSize="11" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextSecBrush}"
+                               Margin="0,12,0,4"/>
+                    <ComboBox x:Name="CboPhase"
+                              SelectionChanged="CboPhase_SelectionChanged"/>
+
+                    <TextBlock Text="차수"
+                               FontSize="11" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextSecBrush}"
+                               Margin="0,12,0,4"/>
+                    <ComboBox x:Name="CboRound"
+                              SelectionChanged="CboRound_SelectionChanged"/>
+
+                    <TextBlock Text="데이터 종류"
+                               FontSize="11" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextSecBrush}"
+                               Margin="0,16,0,6"/>
+                    <CheckBox x:Name="ChkX1" Content="1일 조사 데이터 (x1)"
+                              IsChecked="True"
+                              Checked="TypeChk_Changed" Unchecked="TypeChk_Changed"
+                              Foreground="{StaticResource TextBrush}"/>
+                    <CheckBox x:Name="ChkX0" Content="2일 조사 데이터 (x0)"
+                              IsChecked="True" Margin="0,4,0,0"
+                              Checked="TypeChk_Changed" Unchecked="TypeChk_Changed"
+                              Foreground="{StaticResource TextBrush}"/>
+                    <CheckBox x:Name="ChkCb" Content="코드집"
+                              IsChecked="True" Margin="0,4,0,0"
+                              Checked="TypeChk_Changed" Unchecked="TypeChk_Changed"
+                              Foreground="{StaticResource TextBrush}"/>
+                </StackPanel>
+            </ScrollViewer>
+
+            <StackPanel Grid.Row="2" Margin="0,12,0,0">
+                <Button Content="↺  필터 초기화"
+                        FontSize="11" Padding="0,7"
+                        Style="{StaticResource SecondaryButton}"
+                        Click="BtnReset_Click"/>
+                <Button Content="📁  자료원 관리..."
+                        FontSize="11" Padding="0,7"
+                        Margin="0,6,0,0"
+                        Style="{StaticResource SecondaryButton}"
+                        Click="BtnSourceManage_Click"
+                        ToolTip="사업·기수·차수 추가/편집/삭제 및 활성 차수 변경"/>
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Column="1" Background="{StaticResource BorderBrush}" Margin="0,20"/>
+
+        <Grid Grid.Column="2" Margin="16,20,20,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="DB 조회 / 관리"
+                               FontSize="16" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextBrush}"/>
+                    <TextBlock Text="등록된 1일·2일 조사 데이터와 코드집을 한 곳에서 관리"
+                               FontSize="11" Foreground="{StaticResource TextDimBrush}"
+                               Margin="0,2,0,0"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal"
+                            VerticalAlignment="Center">
+                    <Button Content="📤  업로드"
+                            Padding="14,8" Margin="0,0,8,0" MinWidth="106"
+                            Click="BtnUpload_Click"
+                            ToolTip="새 데이터(1일/2일/코드집) 등록"/>
+                    <Button Content="🔍  조회"
+                            Padding="14,8" Margin="0,0,8,0" MinWidth="92"
+                            Style="{StaticResource SecondaryButton}"
+                            Click="BtnView_Click"
+                            ToolTip="선택한 행의 상세 보기"/>
+                    <Button Content="↔  재지정"
+                            Padding="14,8" Margin="0,0,8,0" MinWidth="106"
+                            Style="{StaticResource SecondaryButton}"
+                            Click="BtnReassign_Click"
+                            ToolTip="선택한 데이터의 자료원(차수)을 다른 차수로 변경"/>
+                    <Button Content="🗑  삭제"
+                            Padding="14,8" MinWidth="92"
+                            Style="{StaticResource DangerButton}"
+                            Click="BtnDelete_Click"
+                            ToolTip="선택한 행 삭제"/>
+                </StackPanel>
+            </Grid>
+
+            <TextBox Grid.Row="1" x:Name="TxtSearch" Margin="0,0,0,8"
+                     TextChanged="TxtSearch_TextChanged"
+                     ToolTip="파일명·설명·자료원 명칭 검색"/>
+
+            <Border Grid.Row="2" Margin="0,0,0,10"
+                    Background="{StaticResource SurfaceBrush}"
+                    BorderBrush="{StaticResource BorderBrush}"
+                    BorderThickness="1" CornerRadius="4"
+                    Padding="14,9">
+                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Disabled">
+                    <TextBlock x:Name="TxtSummary"
+                               FontSize="12"
+                               Foreground="{StaticResource TextSecBrush}"
+                               TextWrapping="NoWrap"/>
+                </ScrollViewer>
+            </Border>
+
+            <DataGrid Grid.Row="3" x:Name="GridDb"
+                      MouseDoubleClick="GridDb_MouseDoubleClick">
+                <DataGrid.RowStyle>
+                    <Style TargetType="DataGridRow">
+                        <Setter Property="Background" Value="Transparent"/>
+                        <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsOrphan}" Value="True">
+                                <Setter Property="Background" Value="{StaticResource WarningSoftBrush}"/>
+                                <Setter Property="Foreground" Value="{StaticResource WarningBrush}"/>
+                            </DataTrigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Background" Value="{StaticResource AccentSoftBrush}"/>
+                                <Setter Property="Foreground" Value="{StaticResource TextBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource BgHoverBrush}"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </DataGrid.RowStyle>
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="종류"
+                        Binding="{Binding TypeLabel}" Width="120"/>
+                    <DataGridTextColumn Header="대분류"
+                        Binding="{Binding ProjectName}" Width="150"/>
+                    <DataGridTextColumn Header="기수 · 차수"
+                        Binding="{Binding SourceLabel}" Width="160"/>
+                    <DataGridTextColumn Header="파일명"
+                        Binding="{Binding FileName}" Width="200"/>
+                    <DataGridTextColumn Header="설명"
+                        Binding="{Binding Description}" Width="*"/>
+                    <DataGridTextColumn Header="행 수"
+                        Binding="{Binding RowCount, StringFormat=N0}" Width="80"/>
+                    <DataGridTextColumn Header="등록일시"
+                        Binding="{Binding RegisteredAt, StringFormat=yyyy-MM-dd HH:mm}" Width="130"/>
+                    <DataGridTextColumn Header="등록자"
+                        Binding="{Binding RegisteredBy}" Width="80"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+        </Grid>
+
+        <Grid x:Name="PnlGroupView" Visibility="Collapsed" Margin="20,20,20,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Margin="0,0,0,12">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                    <TextBlock Text="식품군 DB"
+                               FontSize="16" FontWeight="SemiBold"
+                               Foreground="{StaticResource TextBrush}"/>
+                    <TextBlock Text="기본 식품군 + 분석 시 추가 등록된 식품군을 관리합니다"
+                               FontSize="11" Foreground="{StaticResource TextDimBrush}"
+                               Margin="0,2,0,0"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal"
+                            VerticalAlignment="Center">
+                    <Button Content="＋ 추가"
+                            Padding="14,8" Margin="0,0,8,0" MinWidth="90"
+                            Click="BtnGroupAdd_Click"
+                            ToolTip="새 식품군 등록"/>
+                    <Button Content="✎ 편집"
+                            Padding="14,8" Margin="0,0,8,0" MinWidth="90"
+                            Style="{StaticResource SecondaryButton}"
+                            Click="BtnGroupEdit_Click"
+                            ToolTip="선택한 식품군 편집"/>
+                    <Button Content="🗑 삭제"
+                            Padding="14,8" MinWidth="90"
+                            Style="{StaticResource DangerButton}"
+                            Click="BtnGroupDelete_Click"
+                            ToolTip="선택한 식품군 삭제"/>
+                </StackPanel>
+            </Grid>
+
+            <Grid Grid.Row="1" Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBox Grid.Column="0" x:Name="TxtGroupSearch"
+                         TextChanged="TxtGroupSearch_TextChanged"
+                         ToolTip="식품군명·설명 검색"/>
+                <TextBlock Grid.Column="1" x:Name="TxtGroupSummary"
+                           VerticalAlignment="Center" Margin="14,0,0,0"
+                           FontSize="12"
+                           Foreground="{StaticResource TextSecBrush}"/>
+            </Grid>
+
+            <DataGrid Grid.Row="2" x:Name="GridGroups"
+                      MouseDoubleClick="GridGroups_MouseDoubleClick">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="식품군명"
+                        Binding="{Binding Name}" Width="200"/>
+                    <DataGridTextColumn Header="설명"
+                        Binding="{Binding Description}" Width="*"/>
+                    <DataGridTextColumn Header="식품 수"
+                        Binding="{Binding FoodCount}" Width="80"/>
+                    <DataGridTextColumn Header="코드 수"
+                        Binding="{Binding CodeCount}" Width="80"/>
+                    <DataGridTextColumn Header="구분"
+                        Binding="{Binding KindLabel}" Width="80"/>
+                    <DataGridTextColumn Header="등록"
+                        Binding="{Binding CreatedAt, StringFormat=yyyy-MM-dd}" Width="100"/>
+                </DataGrid.Columns>
+            </DataGrid>
+        </Grid>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -1,0 +1,20 @@
+# Build results
+bin/
+obj/
+
+# .NET dotnet_home (로컬 캐시)
+.dotnet_home/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Node modules
+node_modules/
+
+# 대용량 파일
+*.zip
+
+# 로그
+*.log

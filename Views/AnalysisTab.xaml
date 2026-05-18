@@ -1,0 +1,695 @@
+<UserControl x:Class="UsualIntakeAnalyzer.Views.AnalysisTab"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:oxy="http://oxyplot.org/wpf">
+
+    <UserControl.Resources>
+        <ControlTemplate x:Key="DarkTrackerTemplate" TargetType="ContentControl">
+            <Border Background="#FAFAF8"
+                    BorderBrush="#2563EC"
+                    BorderThickness="1"
+                    CornerRadius="5"
+                    Padding="10,7"
+                    Effect="{x:Null}">
+                <TextBlock Text="{Binding Text}"
+                           Foreground="#1A1A1A"
+                           FontSize="11"
+                           FontFamily="Segoe UI"
+                           LineHeight="18"/>
+            </Border>
+        </ControlTemplate>
+        <Style TargetType="{x:Type oxy:PlotView}">
+            <Setter Property="DefaultTrackerTemplate" Value="{StaticResource DarkTrackerTemplate}"/>
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Background="{StaticResource BgBrush}">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>   <!-- 메인 액션 툴바 -->
+            <RowDefinition Height="Auto"/>   <!-- 결과 메타 툴바 -->
+            <RowDefinition Height="*"/>       <!-- 결과 본문 -->
+            <RowDefinition Height="Auto"/>   <!-- 진행 표시 -->
+        </Grid.RowDefinitions>
+
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <!-- 메인 액션 툴바 — 클로드 디자인 패턴                              -->
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <Border Grid.Row="0" Style="{StaticResource ToolbarBorder}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- 좌측 액션 버튼 그룹 -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="＋ 시나리오 분석"
+                            Padding="14,7" FontSize="14"
+                            FontWeight="Bold"
+                            Click="BtnRegister_Click"
+                            ToolTip="식품군과 자료를 선택해 분석 시나리오 구성"/>
+                    <Border Style="{StaticResource VLineBorder}"/>
+                    <Button Content="↻ 분석 이력"
+                            Padding="10,7" FontSize="13"
+                            Style="{StaticResource GhostButton}"
+                            Click="BtnHistory_Click"
+                            ToolTip="등록된 시나리오 전체 보기"/>
+                    <Button x:Name="BtnExportExcel" Content="💾 결과 내보내기"
+                            Padding="10,7" FontSize="13"
+                            Style="{StaticResource GhostButton}"
+                            Click="BtnExport_Click"
+                            IsEnabled="False"
+                            ToolTip="결과를 CSV로 저장"/>
+                </StackPanel>
+
+                <!-- 우측: 현재 시나리오 배지 -->
+                <Border Grid.Column="2" x:Name="BdgCurrentScenario"
+                        Background="{StaticResource AccentSoftBrush}"
+                        BorderBrush="{StaticResource AccentBorderBrush}"
+                        BorderThickness="1" CornerRadius="3"
+                        Padding="10,5"
+                        Visibility="Collapsed">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="현재 시나리오 · "
+                                   FontSize="11"
+                                   Foreground="{StaticResource AccentBrush}"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock x:Name="TxtCurrentScenario"
+                                   Text="" FontSize="11" FontWeight="SemiBold"
+                                   Foreground="{StaticResource AccentBrush}"
+                                   VerticalAlignment="Center"
+                                   MaxWidth="240" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <!-- 결과 메타 툴바 (분석 결과 요약)                                   -->
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <Border Grid.Row="1" x:Name="PnlResultToolbar" Visibility="Collapsed"
+                Padding="14,7"
+                BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,0,1"
+                Background="{StaticResource SurfaceBrush}">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Disabled">
+                <TextBlock x:Name="TxtResultSummary"
+                           FontSize="11" Foreground="{StaticResource TextSecBrush}"
+                           VerticalAlignment="Center"
+                           TextWrapping="NoWrap"/>
+            </ScrollViewer>
+        </Border>
+
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <!-- 결과 본문 (placeholder + 결과 탭)                                -->
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <Grid Grid.Row="2">
+            <!-- 플레이스홀더 -->
+            <StackPanel x:Name="PnlPlaceholder"
+                        VerticalAlignment="Center" HorizontalAlignment="Center">
+                <TextBlock Text="📊" FontSize="48" HorizontalAlignment="Center"
+                           Margin="0,0,0,16"/>
+                <TextBlock Text="선택된 시나리오가 없습니다"
+                           FontSize="15" FontWeight="SemiBold"
+                           HorizontalAlignment="Center" Margin="0,0,0,6"
+                           Foreground="{StaticResource TextBrush}"/>
+                <TextBlock Text="상단에서 + 시나리오 선택을 눌러 새 분석 조건을 구성하거나, ↻ 분석 이력에서 기존 시나리오를 선택하세요."
+                           FontSize="12" Foreground="{StaticResource TextSecBrush}"
+                           HorizontalAlignment="Center" TextAlignment="Center"
+                           MaxWidth="520" TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <!-- 결과 대시보드 (수직 스크롤) -->
+            <ScrollViewer x:Name="ResultDashboard" Visibility="Collapsed"
+                          VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollBarVisibility="Disabled"
+                          Padding="20,16,20,20">
+                <StackPanel>
+                    <!-- ① 메타 행: 식품군 + N + rhoP + rhoA + papa -->
+                    <Border Style="{StaticResource CardBorder}" Margin="0,0,0,14">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                <TextBlock Text="식품군"
+                                           FontSize="11" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextDimBrush}"/>
+                                <TextBlock x:Name="TxtMetaName" Text="-"
+                                           FontSize="18" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextBrush}"
+                                           TextTrimming="CharacterEllipsis"/>
+                                <TextBlock x:Name="TxtMetaSub" Text=""
+                                           FontSize="11"
+                                           Foreground="{StaticResource TextDimBrush}"
+                                           Margin="0,2,0,0"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Margin="24,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="분석 대상 (N)" FontSize="10"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextDimBrush}"/>
+                                <TextBlock x:Name="TxtN" Text="-" FontSize="22"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource AccentBrush}"
+                                           Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Margin="24,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="rhoP" FontSize="10" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextDimBrush}"/>
+                                <TextBlock x:Name="TxtRhoP" Text="-" FontSize="22"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource SuccessBrush}"
+                                           Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="3" Margin="24,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="rhoA" FontSize="10" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextDimBrush}"/>
+                                <TextBlock x:Name="TxtRhoA" Text="-" FontSize="22"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource SuccessBrush}"
+                                           Margin="0,2,0,0"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="4" Margin="24,0,0,0" VerticalAlignment="Center">
+                                <TextBlock Text="papa (1일만)" FontSize="10" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextDimBrush}"/>
+                                <TextBlock x:Name="TxtPapa" Text="-" FontSize="22"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource WarningBrush}"
+                                           Margin="0,2,0,0"/>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+
+                    <!-- ② 요약 통계: 평균, 중앙값, SD, P95, P99 -->
+                    <Grid Margin="0,0,0,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Style="{StaticResource StatCard}">
+                            <StackPanel>
+                                <TextBlock Text="평균 (mean)" FontSize="10" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextDimBrush}"/>
+                                <TextBlock x:Name="TxtMean" Text="-" FontSize="22"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextBrush}"
+                                           Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="1" Style="{StaticResource StatCard}">
+                            <StackPanel>
+                                <TextBlock Text="중앙값 (P50)" FontSize="10" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextDimBrush}"/>
+                                <TextBlock x:Name="TxtMedian" Text="-" FontSize="22"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextBrush}"
+                                           Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Style="{StaticResource StatCard}">
+                            <StackPanel>
+                                <TextBlock Text="표준편차 (SD)" FontSize="10" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextDimBrush}"/>
+                                <TextBlock x:Name="TxtSd" Text="-" FontSize="22"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextBrush}"
+                                           Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="3" Style="{StaticResource StatCard}">
+                            <StackPanel>
+                                <TextBlock Text="95th 백분위" FontSize="10" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextDimBrush}"/>
+                                <TextBlock x:Name="TxtP95" Text="-" FontSize="22"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource WarningBrush}"
+                                           Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="4" Style="{StaticResource StatCard}" Margin="0,0,0,12">
+                            <StackPanel>
+                                <TextBlock Text="99th 백분위" FontSize="10" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextDimBrush}"/>
+                                <TextBlock x:Name="TxtP99" Text="-" FontSize="22"
+                                           FontWeight="SemiBold"
+                                           Foreground="{StaticResource DangerBrush}"
+                                           Margin="0,4,0,0"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- ③ 차트 — 통합 밀도 + 분위수 도표 + 이론적 감마 -->
+                    <Grid Margin="0,0,0,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="14"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" Style="{StaticResource CardBorder}" Padding="14,10,14,14">
+                            <StackPanel>
+                                <TextBlock Text="일상섭취량 분포 (전체 · 남자 · 여자 · 1일 실측치)"
+                                           FontSize="13" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextBrush}"
+                                           Margin="0,0,0,8"/>
+                                <oxy:PlotView x:Name="PlotDensityAll"
+                                              Background="Transparent" Height="280"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Style="{StaticResource CardBorder}" Padding="14,10,14,14">
+                            <StackPanel>
+                                <TextBlock Text="성별·연령군 분위수 도표"
+                                           FontSize="13" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextBrush}"
+                                           Margin="0,0,0,8"/>
+                                <oxy:PlotView x:Name="PlotQuantile"
+                                              Background="Transparent" Height="360"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <!-- ④ 성별·연령군 통계 결과 테이블 -->
+                    <Border Style="{StaticResource CardBorder}" Padding="0" Margin="0,0,0,14">
+                        <StackPanel>
+                            <Border BorderBrush="{StaticResource BorderBrush}"
+                                    BorderThickness="0,0,0,1" Padding="14,10">
+                                <TextBlock Text="성별·연령군 통계 결과"
+                                           FontSize="13" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextBrush}"/>
+                            </Border>
+                            <DataGrid x:Name="GridResult" MaxHeight="320"
+                                      AutoGenerateColumns="False" IsReadOnly="True">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="성별"    Binding="{Binding Sex}"                          Width="64"/>
+                                    <DataGridTextColumn Header="연령군"  Binding="{Binding AgeGDesc}"                     Width="76"/>
+                                    <DataGridTextColumn Header="N"       Binding="{Binding N}"                           Width="60"/>
+                                    <DataGridTextColumn Header="평균"    Binding="{Binding Average, StringFormat=F2}"     Width="80"/>
+                                    <DataGridTextColumn Header="SD"      Binding="{Binding Sd,      StringFormat=F2}"     Width="75"/>
+                                    <DataGridTextColumn Header="최솟값"  Binding="{Binding Min,     StringFormat=F2}"     Width="80"/>
+                                    <DataGridTextColumn Header="P95"     Binding="{Binding P95th,   StringFormat=F2}"     Width="80"/>
+                                    <DataGridTextColumn Header="P97.5"   Binding="{Binding P975th,  StringFormat=F2}"     Width="80"/>
+                                    <DataGridTextColumn Header="P99"     Binding="{Binding P99th,   StringFormat=F2}"     Width="80"/>
+                                    <DataGridTextColumn Header="최댓값"  Binding="{Binding Max,     StringFormat=F2}"     Width="80"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- ⑤ 마지막 행: 방법 비교 + NCI vs 보완 분포 비교 -->
+                    <Grid Margin="0,0,0,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="14"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Border Grid.Column="0" x:Name="PnlComparison"
+                                Style="{StaticResource CardBorder}" Padding="0"
+                                Visibility="Collapsed">
+                            <StackPanel>
+                                <Border BorderBrush="{StaticResource BorderBrush}"
+                                        BorderThickness="0,0,0,1" Padding="14,10">
+                                    <TextBlock Text="방법 비교 (NCI vs 보완)"
+                                               FontSize="13" FontWeight="SemiBold"
+                                               Foreground="{StaticResource TextBrush}"/>
+                                </Border>
+                                <Border Padding="14,10"
+                                        BorderBrush="{StaticResource BorderBrush}"
+                                        BorderThickness="0,0,0,1">
+                                    <TextBlock x:Name="TxtComparisonSummary"
+                                               FontSize="12" TextWrapping="Wrap" LineHeight="20"
+                                               Foreground="{StaticResource TextBrush}"/>
+                                </Border>
+                                <DataGrid x:Name="GridComparison"
+                                          AutoGenerateColumns="False" IsReadOnly="True"
+                                          MaxHeight="220">
+                                    <DataGrid.Columns>
+                                        <DataGridTextColumn Header="방법"   Binding="{Binding Method}"               Width="80"/>
+                                        <DataGridTextColumn Header="N"      Binding="{Binding N}"                    Width="60"/>
+                                        <DataGridTextColumn Header="평균"   Binding="{Binding Average, StringFormat=F2}" Width="80"/>
+                                        <DataGridTextColumn Header="SD"     Binding="{Binding Sd,      StringFormat=F2}" Width="75"/>
+                                        <DataGridTextColumn Header="중앙값" Binding="{Binding Median,  StringFormat=F2}" Width="80"/>
+                                        <DataGridTextColumn Header="P95"    Binding="{Binding P95th,   StringFormat=F2}" Width="75"/>
+                                        <DataGridTextColumn Header="P99"    Binding="{Binding P99th,   StringFormat=F2}" Width="75"/>
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Style="{StaticResource CardBorder}" Padding="14,10,14,14"
+                                x:Name="PnlComparisonChart" Visibility="Collapsed">
+                            <StackPanel>
+                                <TextBlock x:Name="TxtCompChartTitle"
+                                           Text="NCI vs 보완 방법 — 분포 비교"
+                                           FontSize="13" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextBrush}"
+                                           Margin="0,0,0,8"/>
+                                <oxy:PlotView x:Name="PlotComparison"
+                                              Background="Transparent" Height="280"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <!-- 진행 표시 (분석 중 표시)                                          -->
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <Border Grid.Row="3"
+                Background="{StaticResource PanelBrush}"
+                BorderBrush="{StaticResource BorderBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="14,8"
+                Visibility="{Binding ElementName=PgBar, Path=Visibility}">
+            <StackPanel>
+                <ProgressBar x:Name="PgBar" Height="3"
+                             Visibility="Collapsed" IsIndeterminate="True"/>
+                <TextBlock x:Name="TxtProgress" Text="" FontSize="11"
+                           Foreground="{StaticResource TextSecBrush}"
+                           Margin="0,4,0,0" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Border>
+
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <!-- 사이드 패널 (시나리오 등록 — 우측 슬라이드인)                       -->
+        <!-- ══════════════════════════════════════════════════════════════ -->
+        <Border x:Name="SidePanel" Grid.RowSpan="4"
+                HorizontalAlignment="Right" Width="440"
+                Background="{StaticResource SurfaceBrush}"
+                BorderBrush="{StaticResource BorderLightBrush}"
+                BorderThickness="1,0,0,0"
+                Visibility="Collapsed">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- 헤더 -->
+                <Border Grid.Row="0"
+                        Background="{StaticResource AccentSoftBrush}"
+                        BorderBrush="{StaticResource AccentBorderBrush}"
+                        BorderThickness="0,0,0,1"
+                        Padding="18,14">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="시나리오 선택"
+                                       FontSize="15" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextBrush}"/>
+                            <TextBlock Text="식품군 선택 → 자료 매칭 → 분석 조건 입력"
+                                       FontSize="11"
+                                       Foreground="{StaticResource TextDimBrush}"
+                                       Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <Button Grid.Column="1"
+                                Content="✕" Width="28" Height="28"
+                                FontSize="13"
+                                Style="{StaticResource GhostButton}"
+                                Padding="0"
+                                Click="BtnSideClose_Click"/>
+                    </Grid>
+                </Border>
+
+                <!-- 본문 (스크롤) -->
+                <ScrollViewer Grid.Row="1"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled"
+                              Padding="18,14,18,14">
+                    <StackPanel>
+                        <!-- ① 식품군 선택 -->
+                        <TextBlock Text="① 식품군 선택 *"
+                                   FontSize="12" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextBrush}"
+                                   Margin="0,0,0,6"/>
+                        <TextBlock Text="2일 조사 데이터에 식품 코드가 포함된 식품군만 표시"
+                                   FontSize="10"
+                                   Foreground="{StaticResource TextDimBrush}"
+                                   Margin="0,0,0,8"/>
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0" x:Name="TxtSideGroupSearch"
+                                     TextChanged="TxtSideGroupSearch_TextChanged"
+                                     ToolTip="식품군명 검색"/>
+                            <Button Grid.Column="1" Content="＋ 식품군 추가"
+                                    Padding="10,7" FontSize="11" Margin="6,0,0,0"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Click="BtnSideAddGroup_Click"
+                                    ToolTip="새 식품군 만들기"/>
+                        </Grid>
+                        <DataGrid x:Name="GridSideGroups" Height="180"
+                                  AutoGenerateColumns="False" IsReadOnly="True"
+                                  SelectionChanged="GridSideGroups_SelectionChanged">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="식품군"
+                                    Binding="{Binding Name}" Width="*"/>
+                                <DataGridTextColumn Header="식품"
+                                    Binding="{Binding FoodCount}" Width="60"/>
+                                <DataGridTextColumn Header="코드"
+                                    Binding="{Binding CodeCount}" Width="60"/>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <TextBlock x:Name="TxtSideGroupHint"
+                                   Text="목록에서 식품군을 선택하세요"
+                                   FontSize="10"
+                                   Foreground="{StaticResource TextDimBrush}"
+                                   Margin="0,4,0,0"/>
+
+                        <!-- 선택된 식품군에 포함된 식품명 -->
+                        <Border Margin="0,8,0,0"
+                                Background="{StaticResource PanelBrush}"
+                                BorderBrush="{StaticResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="3">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+                                <Border Grid.Row="0" Padding="10,6"
+                                        BorderBrush="{StaticResource BorderBrush}"
+                                        BorderThickness="0,0,0,1">
+                                    <TextBlock x:Name="TxtSideFoodsHeader"
+                                               Text="포함된 식품명"
+                                               FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{StaticResource TextSecBrush}"/>
+                                </Border>
+                                <Grid Grid.Row="1" MinHeight="56">
+                                    <TextBlock x:Name="TxtSideFoodsEmpty"
+                                               Text="식품군을 선택하면 포함된 식품명이 여기에 표시됩니다."
+                                               FontSize="11"
+                                               Foreground="{StaticResource TextDimBrush}"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               TextWrapping="Wrap"
+                                               TextAlignment="Center"
+                                               Margin="14,12"/>
+                                    <ScrollViewer x:Name="ScvSideFoods" Visibility="Collapsed"
+                                                  MaxHeight="140"
+                                                  VerticalScrollBarVisibility="Auto"
+                                                  HorizontalScrollBarVisibility="Disabled"
+                                                  Padding="10,8">
+                                        <ItemsControl x:Name="SideFoodChips">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel Orientation="Horizontal"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Margin="0,0,4,4"
+                                                            Padding="7,3"
+                                                            Background="{StaticResource AccentDimBrush}"
+                                                            BorderBrush="{StaticResource AccentBorderBrush}"
+                                                            BorderThickness="1"
+                                                            CornerRadius="3">
+                                                        <TextBlock Text="{Binding}"
+                                                                   FontSize="11"
+                                                                   Foreground="{StaticResource AccentBrush}"/>
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </ScrollViewer>
+                                </Grid>
+                            </Grid>
+                        </Border>
+
+                        <!-- ② 1일 조사 (x1) — 다중 선택 -->
+                        <Grid Margin="0,18,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="② 1일 조사 데이터 — 다중 선택 *"
+                                       FontSize="12" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextBrush}"
+                                       VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <Button Content="전체 선택" FontSize="10" Padding="6,3"
+                                        Style="{StaticResource GhostButton}"
+                                        Click="BtnSelectAllX1_Click"/>
+                                <TextBlock Text="|" FontSize="10"
+                                           Foreground="{StaticResource BorderBrush}"
+                                           VerticalAlignment="Center" Margin="2,0"/>
+                                <Button Content="전체 해제" FontSize="10" Padding="6,3"
+                                        Style="{StaticResource GhostButton}"
+                                        Click="BtnDeselectAllX1_Click"/>
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Text="식품군 선택 시 해당 코드를 포함한 항목이 활성화됩니다."
+                                   FontSize="10"
+                                   Foreground="{StaticResource TextDimBrush}"
+                                   Margin="0,0,0,4"/>
+                        <Border BorderBrush="{StaticResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="3"
+                                Background="{StaticResource SurfaceBrush}">
+                            <ScrollViewer MaxHeight="152"
+                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          Padding="8,6">
+                                <ItemsControl x:Name="IcSideX1">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <CheckBox Margin="0,3"
+                                                      IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                                      IsEnabled="{Binding IsEnabled}"
+                                                      Checked="OnDatasetChecked"
+                                                      Unchecked="OnDatasetChecked">
+                                                <StackPanel Margin="4,0,0,0">
+                                                    <TextBlock Text="{Binding Label}"
+                                                               FontSize="11"
+                                                               Foreground="{StaticResource TextBrush}"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding SubLabel}"
+                                                               FontSize="10"
+                                                               Foreground="{StaticResource TextDimBrush}"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               Margin="0,1,0,0"/>
+                                                </StackPanel>
+                                            </CheckBox>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Border>
+
+                        <!-- ③ 2일 조사 (x0) — 다중 선택 -->
+                        <Grid Margin="0,14,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       Text="③ 2일 조사 데이터 — 다중 선택 *"
+                                       FontSize="12" FontWeight="SemiBold"
+                                       Foreground="{StaticResource TextBrush}"
+                                       VerticalAlignment="Center"/>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                <Button Content="전체 선택" FontSize="10" Padding="6,3"
+                                        Style="{StaticResource GhostButton}"
+                                        Click="BtnSelectAllX0_Click"/>
+                                <TextBlock Text="|" FontSize="10"
+                                           Foreground="{StaticResource BorderBrush}"
+                                           VerticalAlignment="Center" Margin="2,0"/>
+                                <Button Content="전체 해제" FontSize="10" Padding="6,3"
+                                        Style="{StaticResource GhostButton}"
+                                        Click="BtnDeselectAllX0_Click"/>
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Text="식품군 선택 시 해당 코드를 포함한 항목이 활성화됩니다."
+                                   FontSize="10"
+                                   Foreground="{StaticResource TextDimBrush}"
+                                   Margin="0,0,0,4"/>
+                        <Border BorderBrush="{StaticResource BorderBrush}"
+                                BorderThickness="1" CornerRadius="3"
+                                Background="{StaticResource SurfaceBrush}">
+                            <ScrollViewer MaxHeight="152"
+                                          VerticalScrollBarVisibility="Auto"
+                                          HorizontalScrollBarVisibility="Disabled"
+                                          Padding="8,6">
+                                <ItemsControl x:Name="IcSideX0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <CheckBox Margin="0,3"
+                                                      IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                                      IsEnabled="{Binding IsEnabled}"
+                                                      Checked="OnDatasetChecked"
+                                                      Unchecked="OnDatasetChecked">
+                                                <StackPanel Margin="4,0,0,0">
+                                                    <TextBlock Text="{Binding Label}"
+                                                               FontSize="11"
+                                                               Foreground="{StaticResource TextBrush}"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Text="{Binding SubLabel}"
+                                                               FontSize="10"
+                                                               Foreground="{StaticResource TextDimBrush}"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               Margin="0,1,0,0"/>
+                                                </StackPanel>
+                                            </CheckBox>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </Border>
+
+                        <!-- ④ 시뮬 횟수 -->
+                        <TextBlock Text="④ 시뮬레이션 반복 횟수 *"
+                                   FontSize="12" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextBrush}"
+                                   Margin="0,18,0,4"/>
+                        <ComboBox x:Name="CboSideSim" SelectedValuePath="Content">
+                            <ComboBoxItem>1</ComboBoxItem>
+                            <ComboBoxItem>3</ComboBoxItem>
+                            <ComboBoxItem IsSelected="True">5</ComboBoxItem>
+                            <ComboBoxItem>10</ComboBoxItem>
+                            <ComboBoxItem>20</ComboBoxItem>
+                            <ComboBoxItem>50</ComboBoxItem>
+                        </ComboBox>
+
+                        <!-- ⑤ 분석자 -->
+                        <TextBlock Text="⑤ 분석자 *"
+                                   FontSize="12" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextBrush}"
+                                   Margin="0,12,0,4"/>
+                        <TextBox x:Name="TxtSideRegBy"
+                                 TextChanged="OnSideAnyChange"/>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- 하단 액션 -->
+                <Border Grid.Row="2"
+                        Background="{StaticResource AccentSoftBrush}"
+                        BorderBrush="{StaticResource AccentBorderBrush}"
+                        BorderThickness="0,1,0,0"
+                        Padding="18,12">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                        <Button Content="취소" Width="100" Margin="0,0,8,0"
+                                Style="{StaticResource SecondaryButton}"
+                                Click="BtnSideClose_Click"/>
+                        <Button x:Name="BtnSideRun"
+                                Content="분석 실행" Width="160"
+                                IsEnabled="False"
+                                Click="BtnSideRun_Click"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

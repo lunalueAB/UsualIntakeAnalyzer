@@ -1,0 +1,134 @@
+<Window x:Class="UsualIntakeAnalyzer.Views.ScenarioDetailDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="시나리오 상세" Height="540" Width="600"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource BgBrush}">
+    <Grid Margin="22,18,22,18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 헤더 -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock x:Name="TxtName"
+                       FontSize="20" FontWeight="Bold"
+                       Foreground="{StaticResource TextBrush}"/>
+            <TextBlock x:Name="TxtMeta"
+                       FontSize="11" Foreground="{StaticResource TextDimBrush}"
+                       Margin="0,4,0,0" TextWrapping="Wrap"/>
+        </StackPanel>
+
+        <!-- 본문 -->
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto"
+                      HorizontalScrollBarVisibility="Disabled">
+            <StackPanel>
+                <!-- x0/x1 -->
+                <Border Background="{StaticResource SurfaceBrush}"
+                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                        CornerRadius="3" Padding="14,10" Margin="0,0,0,12">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="6"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="6"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="6"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="100"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="1일 (x1)"
+                                   FontSize="12" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextSecBrush}"/>
+                        <TextBlock Grid.Row="0" Grid.Column="1" x:Name="TxtX1"
+                                   FontSize="12" Foreground="{StaticResource TextBrush}"
+                                   TextWrapping="Wrap"/>
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="2일 (x0)"
+                                   FontSize="12" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextSecBrush}"/>
+                        <TextBlock Grid.Row="2" Grid.Column="1" x:Name="TxtX0"
+                                   FontSize="12" Foreground="{StaticResource TextBrush}"
+                                   TextWrapping="Wrap"/>
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="시뮬 횟수"
+                                   FontSize="12" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextSecBrush}"/>
+                        <TextBlock Grid.Row="4" Grid.Column="1" x:Name="TxtSim"
+                                   FontSize="12" Foreground="{StaticResource TextBrush}"/>
+                        <TextBlock Grid.Row="6" Grid.Column="0" Text="등록자"
+                                   FontSize="12" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextSecBrush}"/>
+                        <TextBlock Grid.Row="6" Grid.Column="1" x:Name="TxtBy"
+                                   FontSize="12" Foreground="{StaticResource TextBrush}"/>
+                    </Grid>
+                </Border>
+
+                <!-- 식품 목록 -->
+                <TextBlock Text="포함 식품"
+                           FontSize="13" FontWeight="SemiBold"
+                           Foreground="{StaticResource TextBrush}"
+                           Margin="0,0,0,6"/>
+                <Border Background="{StaticResource SurfaceBrush}"
+                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                        CornerRadius="3" Padding="12,10">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  MaxHeight="120">
+                        <TextBlock x:Name="TxtFoods"
+                                   FontSize="12" LineHeight="20"
+                                   TextWrapping="Wrap"
+                                   Foreground="{StaticResource TextBrush}"/>
+                    </ScrollViewer>
+                </Border>
+
+                <!-- 1차코드 -->
+                <TextBlock Text="1차코드"
+                           FontSize="13" FontWeight="SemiBold"
+                           Foreground="{StaticResource TextBrush}"
+                           Margin="0,12,0,6"/>
+                <Border Background="{StaticResource SurfaceBrush}"
+                        BorderBrush="{StaticResource BorderBrush}" BorderThickness="1"
+                        CornerRadius="3" Padding="12,10">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  HorizontalScrollBarVisibility="Disabled"
+                                  MaxHeight="80">
+                        <TextBlock x:Name="TxtCodes"
+                                   FontSize="11" LineHeight="18"
+                                   TextWrapping="Wrap"
+                                   Foreground="{StaticResource TextSecBrush}"/>
+                    </ScrollViewer>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- 버튼 -->
+        <Grid Grid.Row="2" Margin="0,16,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <Button Content="편집" Width="80" Margin="0,0,8,0"
+                        Style="{StaticResource SecondaryButton}"
+                        Click="BtnEdit_Click"/>
+                <Button Content="삭제" Width="80"
+                        Style="{StaticResource DangerButton}"
+                        Click="BtnDelete_Click"/>
+            </StackPanel>
+            <StackPanel Grid.Column="2" Orientation="Horizontal">
+                <Button Content="닫기" Width="92" Margin="0,0,8,0"
+                        Style="{StaticResource SecondaryButton}"
+                        Click="BtnClose_Click"/>
+                <Button Content="▶  분석 실행" Width="140"
+                        Style="{StaticResource SuccessButton}"
+                        Click="BtnAnalyze_Click"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>

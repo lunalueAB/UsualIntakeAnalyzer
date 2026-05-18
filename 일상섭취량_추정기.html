@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>일상섭취량 추정기</title>
+  <style>
+    :root {
+      --primary: #4f8ef7;
+      --primary-dark: #2e6de0;
+      --accent: #34d399;
+      --danger: #f87171;
+      --warning: #fbbf24;
+      --bg: #f0f4ff;
+      --card: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --shadow: 0 2px 12px rgba(79,142,247,0.10);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    header {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      padding: 20px 24px 16px;
+      box-shadow: 0 2px 8px rgba(46,109,224,0.18);
+    }
+    header h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.5px; }
+    header p { font-size: 0.85rem; opacity: 0.85; margin-top: 2px; }
+
+    .date-bar {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--card); padding: 12px 24px; border-bottom: 1px solid var(--border);
+    }
+    .date-bar button {
+      background: none; border: 1px solid var(--border); border-radius: 6px;
+      width: 30px; height: 30px; cursor: pointer; font-size: 1rem; color: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .date-bar button:hover { background: var(--bg); }
+    .date-bar span { font-weight: 600; font-size: 0.95rem; color: var(--text); min-width: 150px; text-align: center; }
+    .today-btn {
+      margin-left: auto; font-size: 0.8rem; padding: 4px 12px;
+      background: var(--primary); color: white; border: none; border-radius: 6px;
+      cursor: pointer; font-weight: 600;
+    }
+    .today-btn:hover { background: var(--primary-dark); }
+
+    .main { max-width: 900px; margin: 0 auto; padding: 20px 16px 60px; display: flex; flex-direction: column; gap: 20px; }
+
+    /* Summary Cards */
+    .summary-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;
+    }
+    .summary-card {
+      background: var(--card); border-radius: 14px; padding: 16px;
+      box-shadow: var(--shadow); text-align: center;
+    }
+    .summary-card .label { font-size: 0.75rem; color: var(--muted); margin-bottom: 4px; }
+    .summary-card .value { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+    .summary-card .goal { font-size: 0.75rem; color: var(--muted); }
+    .summary-card .progress-wrap { height: 6px; background: var(--border); border-radius: 99px; margin-top: 8px; overflow: hidden; }
+    .summary-card .progress-bar {
+      height: 100%; border-radius: 99px;
+      background: linear-gradient(90deg, var(--accent), var(--primary));
+      transition: width 0.4s ease;
+    }
+    .summary-card .progress-bar.over { background: var(--danger); }
+
+    /* 영양소 상세 */
+    .nutrient-section { background: var(--card); border-radius: 14px; padding: 20px; box-shadow: var(--shadow); }
+    .nutrient-section h2 { font-size: 0.95rem; font-weight: 700; margin-bottom: 14px; color: var(--text); }
+    .nutrient-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .nutrient-row .nname { min-width: 80px; font-size: 0.82rem; color: var(--muted); }
+    .nutrient-row .bar-wrap { flex: 1; height: 10px; background: var(--border); border-radius: 99px; overflow: hidden; }
+    .nutrient-row .bar-fill {
+      height: 100%; border-radius: 99px;
+      background: linear-gradient(90deg, #60a5fa, #4f8ef7);
+      transition: width 0.4s ease;
+    }
+    .nutrient-row .bar-fill.over { background: var(--danger); }
+    .nutrient-row .nval { min-width: 90px; text-align: right; font-size: 0.82rem; color: var(--text); font-weight: 600; }
+
+    /* 음식 추가 */
+    .add-section { background: var(--card); border-radius: 14px; padding: 20px; box-shadow: var(--shadow); }
+    .add-section h2 { font-size: 0.95rem; font-weight: 700; margin-bottom: 14px; }
+    .meal-tabs { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+    .meal-tab {
+      padding: 6px 14px; border-radius: 20px; font-size: 0.82rem; font-weight: 600;
+      border: 2px solid var(--border); background: var(--bg); color: var(--muted);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .meal-tab.active { border-color: var(--primary); background: var(--primary); color: white; }
+    .meal-tab:hover:not(.active) { border-color: var(--primary); color: var(--primary); }
+
+    .search-row { display: flex; gap: 8px; margin-bottom: 12px; }
+    .search-row input {
+      flex: 1; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 10px;
+      font-size: 0.9rem; outline: none; color: var(--text);
+    }
+    .search-row input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79,142,247,0.12); }
+    .search-row button {
+      padding: 10px 16px; background: var(--primary); color: white; border: none;
+      border-radius: 10px; cursor: pointer; font-size: 0.9rem; font-weight: 600;
+      white-space: nowrap;
+    }
+    .search-row button:hover { background: var(--primary-dark); }
+
+    .food-results { display: flex; flex-direction: column; gap: 6px; max-height: 260px; overflow-y: auto; margin-bottom: 4px; }
+    .food-item {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+      border: 1.5px solid var(--border); border-radius: 10px; cursor: pointer;
+      background: var(--bg); transition: all 0.15s;
+    }
+    .food-item:hover { border-color: var(--primary); background: #eef3ff; }
+    .food-item.selected { border-color: var(--primary); background: #eef3ff; }
+    .food-item .fname { font-size: 0.88rem; font-weight: 600; flex: 1; }
+    .food-item .finfo { font-size: 0.78rem; color: var(--muted); }
+
+    .amount-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+    .amount-row label { font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
+    .amount-row input {
+      width: 80px; padding: 8px 10px; border: 1.5px solid var(--border); border-radius: 8px;
+      font-size: 0.9rem; text-align: center; outline: none;
+    }
+    .amount-row input:focus { border-color: var(--primary); }
+    .amount-row span { font-size: 0.85rem; color: var(--muted); }
+    .add-btn {
+      margin-left: auto; padding: 9px 20px; background: var(--accent); color: white;
+      border: none; border-radius: 10px; cursor: pointer; font-size: 0.9rem; font-weight: 700;
+    }
+    .add-btn:hover { background: #059669; }
+    .add-btn:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+
+    /* 오늘 먹은 것들 */
+    .log-section { background: var(--card); border-radius: 14px; padding: 20px; box-shadow: var(--shadow); }
+    .log-section h2 { font-size: 0.95rem; font-weight: 700; margin-bottom: 14px; }
+    .meal-group { margin-bottom: 16px; }
+    .meal-group-header {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.82rem; font-weight: 700; color: var(--muted); margin-bottom: 8px;
+    }
+    .meal-group-header .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--primary); }
+    .log-item {
+      display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+      border-radius: 8px; background: var(--bg); margin-bottom: 5px;
+    }
+    .log-item .li-name { flex: 1; font-size: 0.87rem; font-weight: 600; }
+    .log-item .li-amount { font-size: 0.8rem; color: var(--muted); }
+    .log-item .li-kcal { font-size: 0.85rem; font-weight: 700; color: var(--primary); min-width: 60px; text-align: right; }
+    .log-item .del-btn {
+      background: none; border: none; cursor: pointer; font-size: 1rem; color: var(--danger);
+      padding: 2px 4px; border-radius: 5px;
+    }
+    .log-item .del-btn:hover { background: #fee2e2; }
+    .empty-log { text-align: center; color: var(--muted); font-size: 0.85rem; padding: 20px 0; }
+
+    /* Custom food */
+    .custom-toggle { font-size: 0.8rem; color: var(--primary); cursor: pointer; margin-top: 8px; display: inline-block; }
+    .custom-food-form { display: none; margin-top: 12px; background: var(--bg); border-radius: 10px; padding: 14px; }
+    .custom-food-form.show { display: block; }
+    .custom-food-form h3 { font-size: 0.85rem; font-weight: 700; margin-bottom: 10px; color: var(--muted); }
+    .cform-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+    .cform-field label { font-size: 0.75rem; color: var(--muted); display: block; margin-bottom: 3px; }
+    .cform-field input {
+      width: 100%; padding: 7px 10px; border: 1.5px solid var(--border); border-radius: 8px;
+      font-size: 0.85rem; outline: none;
+    }
+    .cform-field input:focus { border-color: var(--primary); }
+    .cform-add-btn {
+      margin-top: 10px; padding: 8px 18px; background: var(--primary); color: white;
+      border: none; border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600;
+    }
+
+    /* 설정 */
+    .settings-section { background: var(--card); border-radius: 14px; padding: 20px; box-shadow: var(--shadow); }
+    .settings-section h2 { font-size: 0.95rem; font-weight: 700; margin-bottom: 14px; }
+    .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+    .settings-field label { font-size: 0.78rem; color: var(--muted); display: block; margin-bottom: 4px; }
+    .settings-field input, .settings-field select {
+      width: 100%; padding: 8px 10px; border: 1.5px solid var(--border); border-radius: 8px;
+      font-size: 0.88rem; outline: none; color: var(--text);
+    }
+    .settings-field input:focus, .settings-field select:focus { border-color: var(--primary); }
+    .settings-save-btn {
+      margin-top: 14px; padding: 9px 22px; background: var(--primary); color: white;
+      border: none; border-radius: 10px; cursor: pointer; font-size: 0.9rem; font-weight: 600;
+    }
+    .settings-save-btn:hover { background: var(--primary-dark); }
+
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: #1e293b; color: white; padding: 12px 24px; border-radius: 12px;
+      font-size: 0.88rem; font-weight: 600; z-index: 999;
+      transition: transform 0.3s ease; pointer-events: none;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 600px) {
+      .summary-grid { grid-template-columns: repeat(2, 1fr); }
+      .amount-row { flex-wrap: wrap; }
+      .add-btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>🥗 일상섭취량 추정기</h1>
+  <p>하루 영양소 섭취량을 쉽게 기록하고 분석하세요</p>
+</header>
+
+<div class="date-bar">
+  <button onclick="changeDate(-1)">&#8249;</button>
+  <span id="dateDisplay"></span>
+  <button onclick="changeDate(1)">&#8250;</button>
+  <button class="today-btn" onclick="goToday()">오늘</button>
+</div>
+
+<div class="main">
+  <!-- 요약 카드 -->
+  <div class="summary-grid" id="summaryGrid"></div>
+
+  <!-- 영양소 바 -->
+  <div class="nutrient-section">
+    <h2>📊 영양소 섭취 현황</h2>
+    <div id="nutrientBars"></div>
+  </div>
+
+  <!-- 음식 추가 -->
+  <div class="add-section">
+    <h2>➕ 음식 추가</h2>
+    <div class="meal-tabs" id="mealTabs"></div>
+    <div class="search-row">
+      <input type="text" id="searchInput" placeholder="음식 이름 검색 (예: 밥, 닭가슴살...)" onkeydown="if(event.key==='Enter')searchFood()" />
+      <button onclick="searchFood()">검색</button>
+    </div>
+    <div class="food-results" id="foodResults"></div>
+    <div class="amount-row" id="amountRow" style="display:none">
+      <label>섭취량</label>
+      <input type="number" id="amountInput" value="100" min="1" max="9999" />
+      <span id="amountUnit">g</span>
+      <button class="add-btn" onclick="addFoodEntry()" id="addBtn">추가</button>
+    </div>
+    <span class="custom-toggle" onclick="toggleCustomForm()">＋ 데이터에 없는 음식 직접 입력</span>
+    <div class="custom-food-form" id="customFoodForm">
+      <h3>직접 입력 (100g 기준)</h3>
+      <div class="cform-grid">
+        <div class="cform-field"><label>음식 이름 *</label><input id="cf_name" placeholder="예: 내가 만든 샐러드" /></div>
+        <div class="cform-field"><label>칼로리 (kcal)</label><input id="cf_kcal" type="number" placeholder="0" /></div>
+        <div class="cform-field"><label>탄수화물 (g)</label><input id="cf_carb" type="number" placeholder="0" /></div>
+        <div class="cform-field"><label>단백질 (g)</label><input id="cf_prot" type="number" placeholder="0" /></div>
+        <div class="cform-field"><label>지방 (g)</label><input id="cf_fat" type="number" placeholder="0" /></div>
+        <div class="cform-field"><label>식이섬유 (g)</label><input id="cf_fib" type="number" placeholder="0" /></div>
+        <div class="cform-field"><label>나트륨 (mg)</label><input id="cf_sod" type="number" placeholder="0" /></div>
+        <div class="cform-field"><label>당류 (g)</label><input id="cf_sug" type="number" placeholder="0" /></div>
+      </div>
+      <button class="cform-add-btn" onclick="addCustomFood()">목록에 추가</button>
+    </div>
+  </div>
+
+  <!-- 기록 -->
+  <div class="log-section">
+    <h2>📋 오늘 섭취 기록</h2>
+    <div id="logContainer"></div>
+  </div>
+
+  <!-- 설정 -->
+  <div class="settings-section">
+    <h2>⚙️ 목표 설정</h2>
+    <div class="settings-grid" id="settingsGrid"></div>
+    <button class="settings-save-btn" onclick="saveGoals()">저장</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ───── 음식 데이터베이스 ─────
+const FOOD_DB = [
+  // 밥/죽
+  { id: 1, name: '흰밥', unit: 'g', per: 100, kcal: 172, carb: 38.0, prot: 2.7, fat: 0.3, fiber: 0.3, sodium: 1, sugar: 0 },
+  { id: 2, name: '현미밥', unit: 'g', per: 100, kcal: 164, carb: 35.2, prot: 3.1, fat: 0.9, fiber: 1.4, sodium: 1, sugar: 0 },
+  { id: 3, name: '잡곡밥', unit: 'g', per: 100, kcal: 165, carb: 35.5, prot: 3.2, fat: 0.8, fiber: 1.6, sodium: 2, sugar: 0 },
+  { id: 4, name: '죽 (쌀죽)', unit: 'g', per: 100, kcal: 62, carb: 13.7, prot: 1.1, fat: 0.1, fiber: 0.1, sodium: 130, sugar: 0 },
+  // 면/빵
+  { id: 5, name: '라면 (조리 후)', unit: 'g', per: 100, kcal: 132, carb: 18.0, prot: 4.0, fat: 4.5, fiber: 0.6, sodium: 790, sugar: 0.8 },
+  { id: 6, name: '우동', unit: 'g', per: 100, kcal: 95, carb: 18.9, prot: 2.9, fat: 0.5, fiber: 0.8, sodium: 420, sugar: 0.1 },
+  { id: 7, name: '짜장면', unit: 'g', per: 100, kcal: 159, carb: 26.5, prot: 5.2, fat: 3.8, fiber: 1.2, sodium: 520, sugar: 1.5 },
+  { id: 8, name: '식빵 (1장)', unit: '장', per: 1, kcal: 73, carb: 13.5, prot: 2.4, fat: 0.9, fiber: 0.7, sodium: 152, sugar: 1.5 },
+  { id: 9, name: '모닝빵', unit: 'g', per: 100, kcal: 298, carb: 53.0, prot: 8.5, fat: 5.5, fiber: 1.8, sodium: 480, sugar: 8.0 },
+  // 육류
+  { id: 10, name: '닭가슴살 (삶은)', unit: 'g', per: 100, kcal: 165, carb: 0, prot: 31.0, fat: 3.6, fiber: 0, sodium: 74, sugar: 0 },
+  { id: 11, name: '삼겹살 (구운)', unit: 'g', per: 100, kcal: 331, carb: 0, prot: 18.5, fat: 28.7, fiber: 0, sodium: 70, sugar: 0 },
+  { id: 12, name: '소고기 불고기', unit: 'g', per: 100, kcal: 196, carb: 5.2, prot: 18.4, fat: 11.0, fiber: 0.2, sodium: 580, sugar: 3.2 },
+  { id: 13, name: '닭볶음탕', unit: 'g', per: 100, kcal: 148, carb: 7.8, prot: 12.5, fat: 6.8, fiber: 0.8, sodium: 620, sugar: 2.1 },
+  { id: 14, name: '돼지고기 앞다리살', unit: 'g', per: 100, kcal: 143, carb: 0, prot: 20.0, fat: 6.8, fiber: 0, sodium: 60, sugar: 0 },
+  { id: 15, name: '햄 (슬라이스)', unit: 'g', per: 100, kcal: 174, carb: 4.0, prot: 14.5, fat: 11.0, fiber: 0, sodium: 1100, sugar: 1.2 },
+  // 수산물
+  { id: 16, name: '연어 (구운)', unit: 'g', per: 100, kcal: 208, carb: 0, prot: 26.0, fat: 11.0, fiber: 0, sodium: 75, sugar: 0 },
+  { id: 17, name: '고등어 (구운)', unit: 'g', per: 100, kcal: 234, carb: 0.2, prot: 21.0, fat: 16.0, fiber: 0, sodium: 390, sugar: 0 },
+  { id: 18, name: '참치캔 (물)', unit: 'g', per: 100, kcal: 116, carb: 0, prot: 26.5, fat: 0.5, fiber: 0, sodium: 340, sugar: 0 },
+  { id: 19, name: '새우 (삶은)', unit: 'g', per: 100, kcal: 99, carb: 0.9, prot: 21.3, fat: 1.1, fiber: 0, sodium: 420, sugar: 0 },
+  { id: 20, name: '오징어 (삶은)', unit: 'g', per: 100, kcal: 92, carb: 2.8, prot: 17.5, fat: 1.2, fiber: 0, sodium: 280, sugar: 0 },
+  // 달걀/유제품
+  { id: 21, name: '달걀 (삶은, 1개)', unit: '개', per: 1, kcal: 78, carb: 0.6, prot: 6.3, fat: 5.3, fiber: 0, sodium: 62, sugar: 0.6 },
+  { id: 22, name: '우유 (전지)', unit: 'mL', per: 100, kcal: 63, carb: 4.8, prot: 3.2, fat: 3.5, fiber: 0, sodium: 43, sugar: 4.8 },
+  { id: 23, name: '요거트 (플레인)', unit: 'g', per: 100, kcal: 61, carb: 4.7, prot: 3.5, fat: 3.3, fiber: 0, sodium: 46, sugar: 4.7 },
+  { id: 24, name: '치즈 (슬라이스, 1장)', unit: '장', per: 1, kcal: 70, carb: 0.5, prot: 4.5, fat: 5.5, fiber: 0, sodium: 300, sugar: 0.1 },
+  { id: 25, name: '두유 (무가당)', unit: 'mL', per: 100, kcal: 43, carb: 2.4, prot: 3.6, fat: 2.0, fiber: 0.3, sodium: 45, sugar: 1.0 },
+  // 채소
+  { id: 26, name: '브로콜리', unit: 'g', per: 100, kcal: 34, carb: 6.6, prot: 2.8, fat: 0.4, fiber: 2.6, sodium: 33, sugar: 1.7 },
+  { id: 27, name: '시금치', unit: 'g', per: 100, kcal: 23, carb: 3.6, prot: 2.9, fat: 0.4, fiber: 2.2, sodium: 79, sugar: 0.4 },
+  { id: 28, name: '양배추', unit: 'g', per: 100, kcal: 25, carb: 5.8, prot: 1.3, fat: 0.1, fiber: 2.5, sodium: 18, sugar: 3.2 },
+  { id: 29, name: '당근', unit: 'g', per: 100, kcal: 41, carb: 9.6, prot: 0.9, fat: 0.2, fiber: 2.8, sodium: 69, sugar: 4.7 },
+  { id: 30, name: '오이', unit: 'g', per: 100, kcal: 16, carb: 3.6, prot: 0.7, fat: 0.1, fiber: 0.5, sodium: 2, sugar: 1.7 },
+  { id: 31, name: '토마토', unit: 'g', per: 100, kcal: 18, carb: 3.9, prot: 0.9, fat: 0.2, fiber: 1.2, sodium: 5, sugar: 2.6 },
+  { id: 32, name: '양파', unit: 'g', per: 100, kcal: 40, carb: 9.3, prot: 1.1, fat: 0.1, fiber: 1.7, sodium: 4, sugar: 4.2 },
+  // 과일
+  { id: 33, name: '사과', unit: 'g', per: 100, kcal: 52, carb: 13.8, prot: 0.3, fat: 0.2, fiber: 2.4, sodium: 1, sugar: 10.4 },
+  { id: 34, name: '바나나', unit: 'g', per: 100, kcal: 89, carb: 22.8, prot: 1.1, fat: 0.3, fiber: 2.6, sodium: 1, sugar: 12.2 },
+  { id: 35, name: '딸기', unit: 'g', per: 100, kcal: 32, carb: 7.7, prot: 0.7, fat: 0.3, fiber: 2.0, sodium: 1, sugar: 4.9 },
+  { id: 36, name: '귤', unit: 'g', per: 100, kcal: 53, carb: 13.3, prot: 0.8, fat: 0.3, fiber: 1.8, sodium: 2, sugar: 9.4 },
+  { id: 37, name: '포도', unit: 'g', per: 100, kcal: 69, carb: 18.1, prot: 0.7, fat: 0.2, fiber: 0.9, sodium: 2, sugar: 15.5 },
+  { id: 38, name: '수박', unit: 'g', per: 100, kcal: 30, carb: 7.6, prot: 0.6, fat: 0.2, fiber: 0.4, sodium: 1, sugar: 6.2 },
+  // 간식/음료
+  { id: 39, name: '아메리카노 (1잔)', unit: '잔', per: 1, kcal: 10, carb: 1.5, prot: 0.3, fat: 0.1, fiber: 0, sodium: 5, sugar: 0 },
+  { id: 40, name: '라떼 (1잔)', unit: '잔', per: 1, kcal: 150, carb: 15.0, prot: 6.0, fat: 6.0, fiber: 0, sodium: 90, sugar: 14.0 },
+  { id: 41, name: '오렌지주스', unit: 'mL', per: 100, kcal: 45, carb: 10.4, prot: 0.7, fat: 0.2, fiber: 0.2, sodium: 1, sugar: 8.4 },
+  { id: 42, name: '콜라 (355mL 캔)', unit: '캔', per: 1, kcal: 139, carb: 39.0, prot: 0, fat: 0, fiber: 0, sodium: 45, sugar: 39.0 },
+  { id: 43, name: '과자 (크래커)', unit: 'g', per: 100, kcal: 432, carb: 65.0, prot: 8.5, fat: 14.5, fiber: 2.0, sodium: 680, sugar: 5.0 },
+  { id: 44, name: '아이스크림 (바닐라)', unit: 'g', per: 100, kcal: 207, carb: 23.6, prot: 3.5, fat: 11.0, fiber: 0, sodium: 80, sugar: 21.0 },
+  { id: 45, name: '초콜릿 (다크)', unit: 'g', per: 100, kcal: 546, carb: 59.4, prot: 5.5, fat: 31.3, fiber: 7.0, sodium: 20, sugar: 47.9 },
+  // 한식
+  { id: 46, name: '된장찌개', unit: 'g', per: 100, kcal: 55, carb: 4.8, prot: 4.2, fat: 1.8, fiber: 1.0, sodium: 680, sugar: 0.5 },
+  { id: 47, name: '김치찌개', unit: 'g', per: 100, kcal: 68, carb: 4.5, prot: 5.5, fat: 2.8, fiber: 1.2, sodium: 780, sugar: 1.0 },
+  { id: 48, name: '비빔밥', unit: 'g', per: 100, kcal: 156, carb: 26.0, prot: 6.5, fat: 3.2, fiber: 2.0, sodium: 450, sugar: 1.5 },
+  { id: 49, name: '김치 (배추)', unit: 'g', per: 100, kcal: 19, carb: 3.6, prot: 1.5, fat: 0.4, fiber: 2.0, sodium: 650, sugar: 1.0 },
+  { id: 50, name: '두부 (순두부)', unit: 'g', per: 100, kcal: 48, carb: 1.7, prot: 4.8, fat: 2.7, fiber: 0.2, sodium: 5, sugar: 0.3 },
+  { id: 51, name: '김밥 (1줄)', unit: '줄', per: 1, kcal: 320, carb: 56.0, prot: 12.0, fat: 6.5, fiber: 2.0, sodium: 890, sugar: 2.0 },
+  { id: 52, name: '떡볶이', unit: 'g', per: 100, kcal: 152, carb: 30.5, prot: 3.8, fat: 2.0, fiber: 0.8, sodium: 620, sugar: 8.5 },
+  { id: 53, name: '순대', unit: 'g', per: 100, kcal: 214, carb: 17.0, prot: 9.5, fat: 11.5, fiber: 0.5, sodium: 540, sugar: 0.5 },
+  { id: 54, name: '전 (부침개)', unit: 'g', per: 100, kcal: 218, carb: 24.0, prot: 5.5, fat: 10.5, fiber: 0.8, sodium: 380, sugar: 1.0 },
+  { id: 55, name: '갈비탕', unit: 'g', per: 100, kcal: 102, carb: 4.5, prot: 9.5, fat: 5.5, fiber: 0.3, sodium: 420, sugar: 0.5 },
+  // 견과류
+  { id: 56, name: '아몬드', unit: 'g', per: 100, kcal: 579, carb: 21.6, prot: 21.2, fat: 49.9, fiber: 12.5, sodium: 1, sugar: 4.4 },
+  { id: 57, name: '호두', unit: 'g', per: 100, kcal: 654, carb: 13.7, prot: 15.2, fat: 65.2, fiber: 6.7, sodium: 2, sugar: 2.6 },
+  { id: 58, name: '땅콩버터', unit: 'g', per: 100, kcal: 588, carb: 20.0, prot: 25.0, fat: 50.0, fiber: 6.0, sodium: 440, sugar: 9.2 },
+];
+
+// ───── 상태 ─────
+let currentDate = new Date();
+let currentMeal = '아침';
+let selectedFood = null;
+let customFoods = JSON.parse(localStorage.getItem('customFoods') || '[]');
+let goals = JSON.parse(localStorage.getItem('goals') || 'null') || {
+  kcal: 2000, carb: 250, prot: 65, fat: 54, fiber: 25, sodium: 2000, sugar: 50
+};
+let logs = JSON.parse(localStorage.getItem('logs') || '{}');
+
+const MEALS = ['아침', '점심', '저녁', '간식'];
+const MEAL_COLORS = { '아침': '#fbbf24', '점심': '#60a5fa', '저녁': '#a78bfa', '간식': '#34d399' };
+
+function dateKey(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function todayLogs() { return logs[dateKey(currentDate)] || []; }
+function saveLogs() { localStorage.setItem('logs', JSON.stringify(logs)); }
+function getAllFoods() { return [...FOOD_DB, ...customFoods]; }
+
+// ───── 날짜 ─────
+function updateDateDisplay() {
+  const d = currentDate;
+  const days = ['일','월','화','수','목','금','토'];
+  const today = new Date();
+  const isToday = dateKey(d) === dateKey(today);
+  document.getElementById('dateDisplay').textContent =
+    `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')} (${days[d.getDay()]})${isToday ? ' · 오늘' : ''}`;
+}
+function changeDate(n) {
+  currentDate = new Date(currentDate);
+  currentDate.setDate(currentDate.getDate() + n);
+  updateDateDisplay();
+  render();
+}
+function goToday() {
+  currentDate = new Date();
+  updateDateDisplay();
+  render();
+}
+
+// ───── 요약 ─────
+function calcTotals() {
+  const ls = todayLogs();
+  const t = { kcal:0, carb:0, prot:0, fat:0, fiber:0, sodium:0, sugar:0 };
+  ls.forEach(e => {
+    const ratio = e.amount / e.food.per;
+    t.kcal += e.food.kcal * ratio;
+    t.carb += e.food.carb * ratio;
+    t.prot += e.food.prot * ratio;
+    t.fat  += e.food.fat  * ratio;
+    t.fiber+= e.food.fiber* ratio;
+    t.sodium+=e.food.sodium*ratio;
+    t.sugar += e.food.sugar*ratio;
+  });
+  return t;
+}
+
+function pct(val, goal) { return Math.min(100, Math.round(val / goal * 100)); }
+function fmt(n, d=1) { return n > 0 ? n.toFixed(d) : '0'; }
+
+function renderSummary(t) {
+  const cards = [
+    { key:'kcal', label:'칼로리', val:fmt(t.kcal,0), unit:'kcal', goal:goals.kcal },
+    { key:'carb', label:'탄수화물', val:fmt(t.carb), unit:'g', goal:goals.carb },
+    { key:'prot', label:'단백질', val:fmt(t.prot), unit:'g', goal:goals.prot },
+    { key:'fat',  label:'지방', val:fmt(t.fat), unit:'g', goal:goals.fat },
+  ];
+  document.getElementById('summaryGrid').innerHTML = cards.map(c => {
+    const p = pct(t[c.key], c.goal);
+    const over = t[c.key] > c.goal;
+    return `
+    <div class="summary-card">
+      <div class="label">${c.label}</div>
+      <div class="value">${c.val}</div>
+      <div class="goal">/ ${c.goal}${c.unit}</div>
+      <div class="progress-wrap"><div class="progress-bar${over?' over':''}" style="width:${p}%"></div></div>
+    </div>`;
+  }).join('');
+}
+
+function renderNutrients(t) {
+  const rows = [
+    { name:'탄수화물', key:'carb', val:t.carb, goal:goals.carb, unit:'g' },
+    { name:'단백질', key:'prot', val:t.prot, goal:goals.prot, unit:'g' },
+    { name:'지방', key:'fat', val:t.fat, goal:goals.fat, unit:'g' },
+    { name:'식이섬유', key:'fiber', val:t.fiber, goal:goals.fiber, unit:'g' },
+    { name:'당류', key:'sugar', val:t.sugar, goal:goals.sugar, unit:'g' },
+    { name:'나트륨', key:'sodium', val:t.sodium, goal:goals.sodium, unit:'mg' },
+  ];
+  document.getElementById('nutrientBars').innerHTML = rows.map(r => {
+    const p = pct(r.val, r.goal);
+    const over = r.val > r.goal;
+    return `
+    <div class="nutrient-row">
+      <span class="nname">${r.name}</span>
+      <div class="bar-wrap"><div class="bar-fill${over?' over':''}" style="width:${p}%"></div></div>
+      <span class="nval">${fmt(r.val)}${r.unit} / ${r.goal}${r.unit}</span>
+    </div>`;
+  }).join('');
+}
+
+// ───── 식사 탭 ─────
+function renderMealTabs() {
+  document.getElementById('mealTabs').innerHTML = MEALS.map(m => `
+    <button class="meal-tab${m===currentMeal?' active':''}" onclick="selectMeal('${m}')">${m}</button>
+  `).join('');
+}
+function selectMeal(m) {
+  currentMeal = m;
+  renderMealTabs();
+}
+
+// ───── 음식 검색 ─────
+function searchFood() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (!q) { showToast('검색어를 입력해주세요'); return; }
+  const results = getAllFoods().filter(f => f.name.includes(q));
+  const el = document.getElementById('foodResults');
+  if (results.length === 0) {
+    el.innerHTML = '<div style="padding:10px;color:var(--muted);font-size:0.85rem">검색 결과가 없어요. 직접 입력해보세요.</div>';
+    return;
+  }
+  el.innerHTML = results.slice(0, 20).map(f => `
+    <div class="food-item" onclick="selectFood(${f.id})" id="fi_${f.id}">
+      <span class="fname">${f.name}</span>
+      <span class="finfo">${f.kcal}kcal / ${f.per}${f.unit} · 탄${f.carb}g 단${f.prot}g 지${f.fat}g</span>
+    </div>
+  `).join('');
+  selectedFood = null;
+  document.getElementById('amountRow').style.display = 'none';
+}
+
+function selectFood(id) {
+  selectedFood = getAllFoods().find(f => f.id === id);
+  document.querySelectorAll('.food-item').forEach(el => el.classList.remove('selected'));
+  const el = document.getElementById('fi_' + id);
+  if (el) el.classList.add('selected');
+  const row = document.getElementById('amountRow');
+  row.style.display = 'flex';
+  document.getElementById('amountInput').value = selectedFood.per;
+  document.getElementById('amountUnit').textContent = selectedFood.unit;
+}
+
+function addFoodEntry() {
+  if (!selectedFood) return;
+  const amount = parseFloat(document.getElementById('amountInput').value);
+  if (!amount || amount <= 0) { showToast('섭취량을 입력해주세요'); return; }
+  const key = dateKey(currentDate);
+  if (!logs[key]) logs[key] = [];
+  logs[key].push({ id: Date.now(), meal: currentMeal, food: selectedFood, amount });
+  saveLogs();
+  selectedFood = null;
+  document.getElementById('foodResults').innerHTML = '';
+  document.getElementById('searchInput').value = '';
+  document.getElementById('amountRow').style.display = 'none';
+  showToast(`${currentMeal}에 추가했어요!`);
+  render();
+}
+
+// ───── 직접 입력 ─────
+function toggleCustomForm() {
+  const el = document.getElementById('customFoodForm');
+  el.classList.toggle('show');
+}
+function addCustomFood() {
+  const name = document.getElementById('cf_name').value.trim();
+  if (!name) { showToast('음식 이름을 입력해주세요'); return; }
+  const newFood = {
+    id: 9000 + Date.now(),
+    name,
+    unit: 'g', per: 100,
+    kcal: +document.getElementById('cf_kcal').value || 0,
+    carb: +document.getElementById('cf_carb').value || 0,
+    prot: +document.getElementById('cf_prot').value || 0,
+    fat:  +document.getElementById('cf_fat').value  || 0,
+    fiber:+document.getElementById('cf_fib').value  || 0,
+    sodium:+document.getElementById('cf_sod').value || 0,
+    sugar: +document.getElementById('cf_sug').value || 0,
+  };
+  customFoods.push(newFood);
+  localStorage.setItem('customFoods', JSON.stringify(customFoods));
+  showToast(`'${name}'이(가) 목록에 추가됐어요!`);
+  ['cf_name','cf_kcal','cf_carb','cf_prot','cf_fat','cf_fib','cf_sod','cf_sug'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('customFoodForm').classList.remove('show');
+}
+
+// ───── 기록 목록 ─────
+function renderLog() {
+  const ls = todayLogs();
+  const container = document.getElementById('logContainer');
+  if (ls.length === 0) {
+    container.innerHTML = '<div class="empty-log">아직 기록된 음식이 없어요 🍽️</div>';
+    return;
+  }
+  let html = '';
+  MEALS.forEach(meal => {
+    const items = ls.filter(e => e.meal === meal);
+    if (items.length === 0) return;
+    const mTotal = items.reduce((s,e) => s + e.food.kcal * e.amount / e.food.per, 0);
+    html += `<div class="meal-group">
+      <div class="meal-group-header">
+        <span class="dot" style="background:${MEAL_COLORS[meal]}"></span>
+        ${meal} · ${Math.round(mTotal)} kcal
+      </div>`;
+    items.forEach(e => {
+      const kcal = e.food.kcal * e.amount / e.food.per;
+      html += `
+      <div class="log-item">
+        <span class="li-name">${e.food.name}</span>
+        <span class="li-amount">${e.amount}${e.food.unit}</span>
+        <span class="li-kcal">${Math.round(kcal)} kcal</span>
+        <button class="del-btn" onclick="deleteEntry(${e.id})" title="삭제">✕</button>
+      </div>`;
+    });
+    html += '</div>';
+  });
+  container.innerHTML = html;
+}
+
+function deleteEntry(id) {
+  const key = dateKey(currentDate);
+  if (logs[key]) {
+    logs[key] = logs[key].filter(e => e.id !== id);
+    if (logs[key].length === 0) delete logs[key];
+    saveLogs();
+    render();
+  }
+}
+
+// ───── 설정 ─────
+function renderSettings() {
+  const fields = [
+    { key:'kcal', label:'목표 칼로리 (kcal)' },
+    { key:'carb', label:'탄수화물 목표 (g)' },
+    { key:'prot', label:'단백질 목표 (g)' },
+    { key:'fat',  label:'지방 목표 (g)' },
+    { key:'fiber',label:'식이섬유 목표 (g)' },
+    { key:'sodium',label:'나트륨 목표 (mg)' },
+    { key:'sugar', label:'당류 목표 (g)' },
+  ];
+  document.getElementById('settingsGrid').innerHTML = fields.map(f => `
+    <div class="settings-field">
+      <label>${f.label}</label>
+      <input type="number" id="goal_${f.key}" value="${goals[f.key]}" min="0" />
+    </div>
+  `).join('');
+}
+function saveGoals() {
+  ['kcal','carb','prot','fat','fiber','sodium','sugar'].forEach(k => {
+    const v = parseFloat(document.getElementById('goal_'+k).value);
+    if (v > 0) goals[k] = v;
+  });
+  localStorage.setItem('goals', JSON.stringify(goals));
+  showToast('목표가 저장됐어요!');
+  render();
+}
+
+// ───── 토스트 ─────
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ───── 렌더 ─────
+function render() {
+  const t = calcTotals();
+  renderSummary(t);
+  renderNutrients(t);
+  renderMealTabs();
+  renderLog();
+  renderSettings();
+}
+
+// ───── 초기화 ─────
+updateDateDisplay();
+render();
+</script>
+</body>
+</html>

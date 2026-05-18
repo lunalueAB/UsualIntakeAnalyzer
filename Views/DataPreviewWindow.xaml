@@ -1,0 +1,36 @@
+<Window x:Class="UsualIntakeAnalyzer.Views.DataPreviewWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="데이터 미리보기" Height="600" Width="1000"
+        WindowStartupLocation="CenterOwner">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- 메타 -->
+        <Border Grid.Row="0" Style="{StaticResource CardBorder}" Margin="0,0,0,12">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock x:Name="TxtMeta1" Foreground="{StaticResource TextSecBrush}" Margin="0,0,24,0"/>
+                <TextBlock x:Name="TxtMeta2" Foreground="{StaticResource TextSecBrush}" Margin="0,0,24,0"/>
+                <TextBlock x:Name="TxtMeta3" Foreground="{StaticResource TextSecBrush}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- 데이터 테이블 -->
+        <DataGrid Grid.Row="1" x:Name="GridData" AutoGenerateColumns="True"
+                  IsReadOnly="True" MaxHeight="440"/>
+
+        <!-- 버튼 -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <TextBlock x:Name="TxtRowInfo" VerticalAlignment="Center"
+                       Foreground="{StaticResource TextSecBrush}" Margin="0,0,16,0"/>
+            <Button Content="CSV 다운로드" Width="130" Margin="0,0,10,0"
+                    Style="{StaticResource SuccessButton}" Click="BtnDownload_Click"/>
+            <Button Content="닫기" Width="80" Style="{StaticResource SecondaryButton}"
+                    Click="BtnClose_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>
